@@ -1,0 +1,4 @@
+{:ns-alias nil
+ :namespaces {:default [[clojure.repl]]
+              :user []}
+ :watch []}}

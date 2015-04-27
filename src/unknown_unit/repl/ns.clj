@@ -1,47 +1,55 @@
 (ns unknown-unit.repl.ns
-  (:require [ns-tracker.core :refer :all]))
+  (:require [unknown-unit.config :as config]
+            [ns-tracker.core :refer :all]))
 
-;; Define this if you want your core functionality namespaces instead of locally referred.
-;; Requires a symbol, e.g., 'core
-(def ^:private ns-alias nil)
+;; Define this if you want your core functions aliased
+;; instead of locally referred.
+(def ^:private ns-alias (config/get :ns-alias))
 
-;; If you want to alias the main namespace to something,
-;; modify like this (assuming my-util is the desired name):
-;; [~(symbol (str *ns*)) :as 'my-util]
 (def ^:private core-namespace
-  (let [ns-symbol [(symbol (str *ns*))]]
-    (if ns-alias
-      (conj ns-symbol :as ns-alias)
-      ns-symbol)))
+  (cond-> [(symbol (str *ns*))]
+          ns-alias (conj :as ns-alias)))
 
-;; Always includes the current namespace, so that
-;; ns+, ns- and reload-ns are always available.
 ;; Add namespaces you want included, e.g.,
 ;; [:clojure.set :as set].
 (def ^:private user-namespaces
-  '[])
+  (let [namespaces (config/get :namespaces)]
+    (into (:default namespaces) (:user namespaces))))
 
-(def ^:private follow-namespaces
+;; Always includes the current namespace, so that
+;; ns+, ns- and reload-ns are always available.
+(def ^:private traveling-namespaces
   (cons core-namespace user-namespaces))
 
-(def ^:private modified-namespaces
-  (ns-tracker ["src" "test"]))
+(def ^:private watched-namespaces
+  (ns-tracker (into ["src" "test"] (config/get :watch))))
 
-;; Namespace reloading tools.
+;; Namespace reloading
 
 (declare refer-some)
 
-(defn bootstrap
+(defn- load-traveling-namespaces
   []
-  (refer (first core-namespace)))
+  (doseq [namespace traveling-namespaces]
+    (require (refer-some namespace) :reload)))
 
+(defn init
+  []
+  (load-traveling-namespaces))
+
+;; NOTE Config reloading is only useful in a dev environment.
+;; TODO Add config-dir to config, which allows reloading config
+;;      to add new user libraries at any time.
 (defn reload-ns
   []
-  (doseq [ns-sym (modified-namespaces)]
-    (require ns-sym :reload))
-  (require (refer-some core-namespace) :reload))
+  (doseq [namespace (watched-namespaces)]
+    (require namespace :reload))
+  (config/reload)
+  (load-traveling-namespaces))
 
-;; Namespace traversal tools.
+;; Namespace traversal
+
+(def ^:private ns-directives #{:as :refer})
 
 (defn- refer-all
   [namespace]
@@ -49,18 +57,16 @@
 
 (defn- refer-some
   [namespace]
-  (if (some #{:as :refer} namespace)
+  (if (some ns-directives namespace)
     namespace
     (refer-all namespace)))
 
 (defmacro follow-ns
   [namespace & {:keys [refer-all?]}]
-  (let [ref-fn (if refer-all? refer-all refer-some)
-        follow-namespaces (map ref-fn follow-namespaces)]
+  (let [ref-fn (if refer-all? refer-all refer-some)]
     `(do
-       (reload-ns)
        (ns ~namespace
-         (:require ~@follow-namespaces)))))
+         (:require ~@(map ref-fn traveling-namespaces))))))
 
 (defmacro ns+
   [namespace]
