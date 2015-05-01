@@ -31,6 +31,10 @@
 
 (declare refer-some)
 
+(defn bootstrap
+  []
+  (refer (first core-namespace)))
+
 (defn reload-ns
   []
   (doseq [ns-sym (modified-namespaces)]
