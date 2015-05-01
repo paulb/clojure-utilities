@@ -107,8 +107,6 @@ are referred to local functions, whether `:as` or `:refer` were already declared
 - can reload only (on request)
   - current namespace
   - specified namespaces
-- make this an installable library, instead of having to use
-  file paths
 - fix :init conflicts (bypassed by using injections)
 
 - Other functions/macros
@@ -117,7 +115,6 @@ are referred to local functions, whether `:as` or `:refer` were already declared
 
 ## Issues
 
-- ns-alias not applied in initially loaded namespace
 - If you have an :init in the same profile or the root of your project.clj
   for the current project, this will conflict with the :init section
   required for the utilities to work.

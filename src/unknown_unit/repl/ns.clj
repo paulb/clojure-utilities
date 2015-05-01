@@ -1,16 +1,32 @@
 (ns unknown-unit.repl.ns
-  (:require [unknown-unit.config :as config]
-            [ns-tracker.core :refer :all]))
+  (:require [clojure.string :as str]
+            [ns-tracker.core :refer :all]
+            [unknown-unit.config :as config])
+  (:refer-clojure :exclude [ns-imports]))
 
 ;; Define this if you want your core functions aliased
 ;; instead of locally referred.
 (def ^:private ns-alias (config/get :ns-alias))
+(def ^:private ns-imports ['ns])
+(def ^:private referrals ['ns- 'ns+ 'reload-ns])
 
-(def ^:private core-namespace
-  (let [modifier (if ns-alias
-                   [:as ns-alias]
-                   [:refer '[ns- ns+ reload-ns]])]
-    (into [(symbol (str *ns*))] modifier)))
+(defn- aliased
+  [namespace suffix]
+  (let [aliased (symbol (str ns-alias "." suffix))]
+    (conj namespace :as aliased)))
+
+(defn- referred
+  [namespace]
+  (let [referrals (var-get (intern (first namespace) 'referrals))]
+    (conj namespace :refer referrals)))
+
+(def ^:private core-namespaces
+  (let [ns-prefix (str/replace (str *ns*) #"\.[^\.]*$" "")
+        namespaces (->> (map #(str ns-prefix "." %) ns-imports)
+                        (map (comp vector symbol)))]
+    (if ns-alias
+      (mapv aliased namespaces ns-imports)
+      (mapv referred namespaces))))
 
 (def ^:private ns-directives #{:as :refer})
 
@@ -32,15 +48,11 @@
          (map refer-some))))
 
 (def ^:private traveling-namespaces
-  (into [core-namespace] user-namespaces))
+  (into core-namespaces user-namespaces))
 
 (def ^:private watched-namespaces
   (ns-tracker (into ["src" "test"] (config/get :watch))))
 
-;; Namespace reloading
-
-;; Always includes the current namespace, so that
-;; ns+, ns- and reload-ns are always available.
 (defn- load-namespaces
   [namespaces]
   (doseq [namespace namespaces]
@@ -59,13 +71,11 @@
   (config/reload)
   (load-namespaces traveling-namespaces))
 
-;; Namespace traversal
-
 (defmacro follow-ns
   [namespace & {:keys [refer-all?]}]
   `(ns ~namespace
      (:require ~@(if refer-all?
-                   (cons core-namespace (map refer-all user-namespaces))
+                   (into core-namespaces (map refer-all user-namespaces))
                    traveling-namespaces))))
 
 (defmacro ns+
