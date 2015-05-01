@@ -1,13 +1,14 @@
 (ns unknown-unit.repl.ns
   (:require [clojure.string :as str]
             [ns-tracker.core :refer :all]
-            [unknown-unit.config :as config])
+            [unknown-unit.config :as config]
+            [unknown-unit.repl.macro :as macro])
   (:refer-clojure :exclude [ns-imports]))
 
 ;; Define this if you want your core functions aliased
 ;; instead of locally referred.
 (def ^:private ns-alias (config/get :ns-alias))
-(def ^:private ns-imports ['ns])
+(def ^:private ns-imports ['ns 'macro])
 (def ^:private referrals ['ns- 'ns+ 'reload-ns])
 
 (defn- aliased

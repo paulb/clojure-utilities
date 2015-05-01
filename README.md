@@ -83,6 +83,8 @@ local functions unless specified otherwise in the config.
 
 Start a repl inside any of your projects.
 
+### Namespace functions
+
 `(reload-ns)` will reload all namespaces from your project src and test
 directories, as well as the `unknown-unit.repl.ns` namespace.
 
@@ -92,6 +94,41 @@ functions (:refer :all).
 
 `(ns+ <namespace>)` does the same as `ns-` except that all defined namespaces
 are referred to local functions, whether `:as` or `:refer` were already declared.
+
+### Macro functions
+
+`(expand <macro-call>)` will produce pretty printed output of the macro expansion.
+
+E.g.,
+
+`(expand (and happy days))`
+will produce
+
+```
+(clojure.core/let
+ [and__3973__auto__ happy]
+ (if and__3973__auto__ (clojure.core/and days) and__3973__auto__))
+```
+
+`(expand :all (and happy days))`
+will produce
+
+```
+(let*
+ [and__3973__auto__ happy]
+ (if and__3973__auto__ days and__3973__auto__))
+```
+
+An optional first argument specifies the type of expansion.
+
+Available options:
+
+- :0 macroexpand
+- :1 macroexpand-1
+- :all clojure.walk/macroexpand-all
+
+Leaving out the level option automatically selects level :1. Often this produces the same as level :0, but sometimes level :0 may expand more.
+See the documentation for these functions for more details.
 
 ## Todo
 
@@ -110,8 +147,12 @@ are referred to local functions, whether `:as` or `:refer` were already declared
 - fix :init conflicts (bypassed by using injections)
 
 - Other functions/macros
-- macro to print evaluation of macro (recursive if requested to n levels)
-- pp shortcut for pprint
+- extend macro expander to expand n levels only on request?
+- pp shortcut for pprint?
+
+- support excluding functions from the current namespace (if this is possible)
+  - so that people can redefine functions they know they don't need direct access to
+  - only used if functions are referred locally
 
 ## Issues
 
