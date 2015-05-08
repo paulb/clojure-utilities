@@ -1,11 +1,11 @@
 (ns unknown-unit.repl.macro
   (:require [clojure.pprint :refer [pprint]]))
 
-(def referrals ['expand])
+(def referrals '[expand])
 
 (def ^:private expansions
-  {:0 'macroexpand
-   :1 'macroexpand-1
+  {:0 'clojure.core/macroexpand
+   :1 'clojure.core/macroexpand-1
    :all 'clojure.walk/macroexpand-all})
 
 (defmacro expand
@@ -17,5 +17,5 @@
   :all macroexpand-all"
   ([body] `(expand :1 ~body))
   ([level & body]
-   (let [expansion-fn (get expansions level 'macroexpand-1)]
+   (let [expansion-fn (get expansions level 'clojure.core/macroexpand-1)]
      `(pprint (~expansion-fn '~@body)))))

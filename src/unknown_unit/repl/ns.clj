@@ -1,15 +1,25 @@
 (ns unknown-unit.repl.ns
   (:require [clojure.string :as str]
             [ns-tracker.core :refer :all]
-            [unknown-unit.config :as config]
-            [unknown-unit.repl.macro :as macro])
-  (:refer-clojure :exclude [ns-imports]))
+            [unknown-unit.config :as config])
+  (:use [clojure.java.io])
+  (:refer-clojure :exclude [namespace ns-imports ns-name]))
 
+;; Namespaces are defined in require format:
+;; [unladen.swallow]
+;; [unladen.swallow :as swallow]
+;; [unladen.swallow :refer [coconuts]]
+;; [unladen.swallow :as swallow :refer [coconuts]]
+
+(def ^:private local-ns (symbol (str *ns*)))
 ;; Define this if you want your core functions aliased
 ;; instead of locally referred.
 (def ^:private ns-alias (config/get :ns-alias))
-(def ^:private ns-imports ['ns 'macro])
-(def ^:private referrals ['ns- 'ns+ 'reload-ns])
+(def ^:private ns-prefix (str/replace (str *ns*) #"\.[^\.]*$" ""))
+(def ^:private ns-imports '[ns macro])
+(def ^:private ns-directives #{:as :refer})
+
+(def referrals '[ns- ns+ reload-ns])
 
 (defn- aliased
   [namespace suffix]
@@ -18,18 +28,22 @@
 
 (defn- referred
   [namespace]
-  (let [referrals (var-get (intern (first namespace) 'referrals))]
-    (conj namespace :refer referrals)))
+  (let [ns-name (first namespace)]
+    (when-not (= ns-name local-ns) (require `[~ns-name]))
+    (let [referrals (var-get (intern ns-name 'referrals))]
+      (conj namespace :refer referrals))))
 
-(def ^:private core-namespaces
-  (let [ns-prefix (str/replace (str *ns*) #"\.[^\.]*$" "")
-        namespaces (->> (map #(str ns-prefix "." %) ns-imports)
+(def mod-namespaces (ns-tracker ["src" "test"]))
+
+(defn- core-namespaces*
+  []
+  (let [namespaces (->> (map #(str ns-prefix "." %) ns-imports)
                         (map (comp vector symbol)))]
     (if ns-alias
       (mapv aliased namespaces ns-imports)
       (mapv referred namespaces))))
 
-(def ^:private ns-directives #{:as :refer})
+(def ^:private core-namespaces (memoize core-namespaces*))
 
 (defn- refer-all
   [namespace]
@@ -43,16 +57,22 @@
 
 ;; Add namespaces you want included, e.g.,
 ;; [:clojure.set :as set].
-(def ^:private user-namespaces
-  (let [namespaces (config/get :namespaces)]
-    (->> (into (:default namespaces) (:user namespaces))
-         (map refer-some))))
+(defn- user-namespaces*
+  []
+  (->> (vals (config/get :namespaces))
+       (apply concat)
+       (map refer-some)
+       (into [])))
 
-(def ^:private traveling-namespaces
-  (into core-namespaces user-namespaces))
+(def ^:private user-namespaces (memoize user-namespaces*))
 
-(def ^:private watched-namespaces
-  (ns-tracker (into ["src" "test"] (config/get :watch))))
+(defn- traveling-namespaces*
+  []
+  (into (core-namespaces) (user-namespaces)))
+
+(def ^:private traveling-namespaces (memoize traveling-namespaces*))
+
+(def ^:private modified-namespaces (ns-tracker (into ["src" "test"] (config/get :watch))))
 
 (defn- load-namespaces
   [namespaces]
@@ -61,23 +81,25 @@
 
 (defn init
   []
-  (load-namespaces traveling-namespaces))
+  (load-namespaces (traveling-namespaces)))
 
 ;; NOTE Config reloading is only useful in a dev environment.
 ;; TODO Add config-dir to config, which allows reloading config
 ;;      to add new user libraries at any time.
 (defn reload-ns
   []
-  (load-namespaces (watched-namespaces))
+  ;; TODO Don't need to load a modified namespace if
+  ;;      it's a traveling namespace.
+  (load-namespaces (modified-namespaces))
   (config/reload)
-  (load-namespaces traveling-namespaces))
+  (load-namespaces (traveling-namespaces)))
 
 (defmacro follow-ns
   [namespace & {:keys [refer-all?]}]
   `(ns ~namespace
      (:require ~@(if refer-all?
-                   (into core-namespaces (map refer-all user-namespaces))
-                   traveling-namespaces))))
+                   (into (core-namespaces) (map refer-all (user-namespaces)))
+                   (traveling-namespaces)))))
 
 (defmacro ns+
   [namespace]
