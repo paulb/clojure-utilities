@@ -119,8 +119,7 @@
 
 (def ^:private system*
   (atom {:running false
-         :start start
-         :stop [stopped]}))
+         :stop []}))
 
 (defn system
   []
@@ -129,48 +128,78 @@
 (defn start
   ([] (println :default-start) (start system*))
   ([system]
-   (println :repl-util :tools :start
-            :with system)
    (if-not (:running system)
      (do
-       (println :auto-refresh-cfg (config/get :auto-refresh))
-       (println :auto-refresh auto-refresh?)
-       (load-namespaces (traveling-namespaces))
-       (if auto-refresh?
-         (let [refresh-interval (config/get :refresh-interval 500)]
-           (println :refreshing--)
-           (let [refresh-ms (config/get :refresh-ms)
-                 _ (println :and :then...)
-                 loader (future (while true
-                                  (Thread/sleep refresh-interval)
-                                  (reload-ns)))
-                 _ (println :and :after :that...)]
-             (-> (update-in system [:stop]
-                            conj `(future-cancel ~loader))
-                 running
-                 ((fn [x]
-                    (println)
-                    (println :current-system x)
-                    (println)
-                    x)))))
-         (running system)))
+       (println :repl-util :tools :start
+                :with system)
+       (let [{:keys [auto interval]} (config/get :refresh)]
+         (if auto
+           (let [motherfucker "English, do you speak it?"
+                 loader (future (while true (println :hey) (Thread/sleep 1000)))]
+         ;   (let [loader (future (while true
+         ;                          (Thread/sleep interval)
+         ;                          (reload-ns)))]
+         ;     (-> (update-in system [:stop] conj `(future-cancel ~loader))
+         ;         running)
+             ; (running system)))
+             (-> (update-in system [:stop] conj (fn [] (future-cancel loader)))
+                 running))
+           (running system))))
      system)))
+   ; (if-not (:running system)
+   ;   (do
+   ;     (println :auto-refresh-cfg (config/get :auto-refresh))
+   ;     (println :auto-refresh auto-refresh?)
+   ;     (load-namespaces (traveling-namespaces))
+   ;     (if auto-refresh?
+   ;       (let [refresh-interval (config/get :refresh-interval 500)]
+   ;         (println :refreshing--)
+   ;         (let [refresh-ms (config/get :refresh-ms)
+   ;               _ (println :and :then...)
+   ;               loader (future (while true
+   ;                                (Thread/sleep refresh-interval)
+   ;                                (reload-ns)))
+   ;               _ (println :and :after :that...)]
+   ;           (-> (update-in system [:stop]
+   ;                          conj `(future-cancel ~loader))
+   ;               running
+   ;               ((fn [x]
+   ;                  (println)
+   ;                  (println :current-system x)
+   ;                  (println)
+   ;                  x)))))
+   ;       (running system)))
+   ;   system)))
+
+; (def ^:private initialized (atom false))
+
+; (defn init
+;   []
+;   (when-not @initialized
+;     (println :initialize :system)
+;     (reset! initialized true)
+;     (swap! system* start)
+;     (println :siestem @system*)
+;     (println :SYSTEM (system))))
 
 (def ^:private initialized (atom false))
 
 (defn init
   []
   (when-not @initialized
-    (println :initialize :system)
-    (reset! initialized true)
+    (println :initializing :ns-controller)
+    (load-namespaces (traveling-namespaces))
     (swap! system* start)
-    (println :siestem @system*)
-    (println :SYSTEM (system))))
+    (reset! initialized true)))
 
 (defn stop
-  [system]
-  (println :stopping)
-  (doall (:stop system)))
+  ([] (stop system*))
+  ([system]
+   (when (:running @system)
+     (println :stopping)
+     (doall (for [fn (:stop @system)] (fn)))
+     (swap! system assoc :stop [])
+     (swap! system stopped))))
 
 (defn reset
   [system]
@@ -192,7 +221,7 @@
 
 (defn -main
   [& args]
-  ; (.addShutdownHook (Runtime/getRuntime) (do (stop) (Thread. stop)))
+  (.addShutdownHook (Runtime/getRuntime) (do (stop) (Thread. stop)))
   (start))
 
 (def atom-test (atom {}))
