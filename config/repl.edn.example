@@ -1,4 +1,6 @@
-{:ns-alias nil
+{:auto-refresh true
  :namespaces {:default [[clojure.repl]]
               :user []}
+ :ns-alias nil
+ :refresh-interval 500 ;; ms
  :watch []}}
