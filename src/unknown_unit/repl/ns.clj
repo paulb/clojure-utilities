@@ -8,8 +8,12 @@
 ;; Namespaces are defined in require format:
 ;; [unladen.swallow]
 ;; [unladen.swallow :as swallow]
-;; [unladen.swallow :refer [coconuts]]
-;; [unladen.swallow :as swallow :refer [coconuts]]
+;; [laden.swallow :refer [coconuts]]
+;; [laden.swallow :as swallow :refer [coconuts]]
+;; [vorpal.rabbit :refer :all]
+
+;; The last one is not strictly necessary:
+;; [vorpal.rabbit] implies :refer :all
 
 (def ^:private local-ns (symbol (str *ns*)))
 ;; Define this if you want your core functions aliased
@@ -29,11 +33,9 @@
 (defn- referred
   [namespace]
   (let [ns-name (first namespace)]
-    (when-not (= ns-name local-ns) (require `[~ns-name]))
-    (let [referrals (var-get (intern ns-name 'referrals))]
-      (conj namespace :refer referrals))))
-
-(def mod-namespaces (ns-tracker ["src" "test"]))
+    (when-not (= ns-name local-ns) (require (list ns-name)))
+    (->> (var-get (intern ns-name 'referrals))
+         (conj namespace :refer))))
 
 (defn- core-namespaces*
   []
@@ -71,7 +73,6 @@
   (into (core-namespaces) (user-namespaces)))
 
 (def ^:private traveling-namespaces (memoize traveling-namespaces*))
-
 (def ^:private modified-namespaces (ns-tracker (into ["src" "test"] (config/get :watch))))
 
 (defn- load-namespaces
@@ -79,11 +80,9 @@
   (doseq [namespace namespaces]
     (require namespace :reload)))
 
-(defn init
-  []
-  (load-namespaces (traveling-namespaces)))
-
 ;; NOTE Config reloading is only useful in a dev environment.
+;; TODO Don't do it unless in dev environment
+;;      (requires environment awareness, this can go in config)
 ;; TODO Add config-dir to config, which allows reloading config
 ;;      to add new user libraries at any time.
 (defn reload-ns
@@ -95,16 +94,23 @@
   (load-namespaces (traveling-namespaces)))
 
 (defmacro follow-ns
+  "Changes to a new namespace and requires specified namespaces.
+  Namespaces are aliased or referred as declared.
+  Not intended for direct use. Use ns- or ns+ instead."
   [namespace & {:keys [refer-all?]}]
   `(ns ~namespace
      (:require ~@(if refer-all?
                    (into (core-namespaces) (map refer-all (user-namespaces)))
                    (traveling-namespaces)))))
 
-(defmacro ns+
-  [namespace]
-  `(follow-ns ~namespace :refer-all? true))
-
 (defmacro ns-
+  "Changes to a new namespace and requires specified namespaces.
+  Namespaces are aliased or referred as declared."
   [namespace]
   `(follow-ns ~namespace))
+
+(defmacro ns+
+  "Changes to a new namespace and requires specified namespaces.
+  All functions are referred locally."
+  [namespace]
+  `(follow-ns ~namespace :refer-all? true))
