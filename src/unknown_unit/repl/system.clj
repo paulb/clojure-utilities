@@ -28,13 +28,12 @@
   (println "IT FUCKING HATES ME")
   (let [refresh-interval (config/get [:refresh :interval] 500)]
     (future (while (not (Thread/interrupted))
-              (println :checking...)
               (Thread/sleep refresh-interval)
               (let [current-system @system*]
                 (ns/reload-ns)
                 (reset! system* current-system))))))
 
-(defn cu [] [:HEY "O" :I :thInK :it :MIGHt :WOrK!])
+(defn cu [] [:boikn :id :sdoid :wok!])
 
 (defn start
   ([] (start system*))
@@ -57,9 +56,9 @@
   ([] (stop system*))
   ([system]
    (if (:running @system)
-     (let [functions (for [fn (:stop @system)] (fn))]
+     (let [operations (for [fn (:stop @system)] (fn))]
        (println :stopping)
-       (doall functions)
+       (doall operations)
        (swap! system assoc :stop [])
        (swap! system stopped))
      system)))
@@ -80,9 +79,10 @@
     (reset! initialized true)))
 
 (defn reset
-  [system]
-  (stop system)
-  (start system))
+  ([] (reset system*))
+  ([system]
+   (stop system)
+   (start system)))
 
 (defn -start
   [this]
