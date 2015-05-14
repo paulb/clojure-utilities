@@ -22,7 +22,11 @@
   [system]
   (assoc system :running false))
 
+;; TODO Don't need to backup/restore state if nothing is reloaded.
 (defn- reloader
+  "Returns a future running a task to check for and reload
+  changed namespaces. System state is backed up, and restored
+  after reloading."
   []
   (let [refresh-interval (config/get [:refresh :interval] 500)]
     (future (while (not (Thread/interrupted))
@@ -33,7 +37,14 @@
                 (reset! initialized (:initialized state))
                 (reset! system* (:system state)))))))
 
+;; TODO Ability to inject external dependencies into the system.
 (defn start
+  "An existing system can be externally supplied, or the
+  current system will be used. When first starting a session,
+  this will use the default empty system.
+  If the configuration declares the system should auto-refresh namespaces,
+  a thread is spun off to manage this task and the system is given a
+  cancellation function."
   ([] (start system*))
   ([system]
    (if-not (:running @system)
@@ -47,6 +58,9 @@
 (defn ok [] :corral)
 
 (defn stop
+  "An existing system can be externally supplied, or the
+  current system will be used. Stopping a system will end
+  the namespace reloading task if one was running."
   ([] (stop system*))
   ([system]
    (if (:running @system)
@@ -57,6 +71,8 @@
      system)))
 
 (defn init
+  "Will only work once. A previous session which has been
+  (stop)ped should be re(start)ed."
   []
   (when-not @initialized
     ;; This still needs work

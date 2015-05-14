@@ -10,6 +10,10 @@
 ;; [unladen.swallow :as swallow]
 ;; [laden.swallow :refer [coconuts]]
 ;; [laden.swallow :as swallow :refer [coconuts]]
+;; [vorpal.rabbit :refer :all]
+
+;; The last one is not strictly necessary:
+;; [vorpal.rabbit] implies :refer :all
 
 (def ^:private local-ns (symbol (str *ns*)))
 ;; Define this if you want your core functions aliased
@@ -90,17 +94,23 @@
   (load-namespaces (traveling-namespaces)))
 
 (defmacro follow-ns
+  "Changes to a new namespace and requires specified namespaces.
+  Namespaces are aliased or referred as declared.
+  Not intended for direct use. Use ns- or ns+ instead."
   [namespace & {:keys [refer-all?]}]
   `(ns ~namespace
      (:require ~@(if refer-all?
                    (into (core-namespaces) (map refer-all (user-namespaces)))
                    (traveling-namespaces)))))
 
-(defmacro ns+
-  [namespace]
-  `(follow-ns ~namespace :refer-all? true))
-
 (defmacro ns-
+  "Changes to a new namespace and requires specified namespaces.
+  Namespaces are aliased or referred as declared."
   [namespace]
   `(follow-ns ~namespace))
 
+(defmacro ns+
+  "Changes to a new namespace and requires specified namespaces.
+  All functions are referred locally."
+  [namespace]
+  `(follow-ns ~namespace :refer-all? true))
