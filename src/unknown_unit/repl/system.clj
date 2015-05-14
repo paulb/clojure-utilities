@@ -30,7 +30,9 @@
     (future (while (not (Thread/interrupted))
               (println :checking...)
               (Thread/sleep refresh-interval)
-              (ns/reload-ns)))))
+              (let [current-system @system*]
+                (ns/reload-ns)
+                (reset! system* current-system))))))
 
 (defn cu [] [:HEY "O" :I :thInK :it :MIGHt :WOrK!])
 
