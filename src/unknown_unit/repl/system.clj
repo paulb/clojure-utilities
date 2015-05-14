@@ -4,16 +4,7 @@
   (:refer-clojure :exclude [ns]))
 
 (def ^:private auto-refresh? (boolean (config/get :auto-refresh)))
-
-(declare start)
-
-(defn running
-  [system]
-  (assoc system :running true))
-
-(defn stopped
-  [system]
-  (assoc system :running false))
+(def ^:private initialized (atom false))
 
 (def ^:private system*
   (atom {:running false
@@ -23,59 +14,54 @@
   []
   @system*)
 
+(defn running
+  [system]
+  (assoc system :running true))
+
+(defn stopped
+  [system]
+  (assoc system :running false))
+
 (defn- reloader
   []
-  (println "IT FUCKING HATES ME")
   (let [refresh-interval (config/get [:refresh :interval] 500)]
     (future (while (not (Thread/interrupted))
               (Thread/sleep refresh-interval)
-              (let [current-system @system*]
+              (let [state {:initialized @initialized
+                           :system @system*}]
                 (ns/reload-ns)
-                (reset! system* current-system))))))
-
-(defn cu [] [:boikn :id :sdoid :wok!])
+                (reset! initialized (:initialized state))
+                (reset! system* (:system state)))))))
 
 (defn start
   ([] (start system*))
   ([system]
    (if-not (:running @system)
-     (do
-       (println :AAAAAAAAAAAAAAAAAAAAAAAAFUUUUUUUUUUCK!)
-       (if-let [auto? (config/get [:refresh :auto])]
-         (let [cancel-loader (partial future-cancel (reloader))
-               _ (println :cancel-loader cancel-loader)]
-           (println "L OR WHATEVER THE FUCK!")
-           (swap! system update-in [:stop] conj cancel-loader)
-           (swap! system running))
-             ; (-> (update-in system [:stop] conj (partial future-cancel (reloader)))
-             ;     running)))
-         (swap! system running)))
+     (if-let [auto? (config/get [:refresh :auto])]
+       (let [cancel-loader (partial future-cancel (reloader))]
+         (swap! system update-in [:stop] conj cancel-loader)
+         (swap! system running))
+       (swap! system running))
     system)))
+
+(defn ok [] :corral)
 
 (defn stop
   ([] (stop system*))
   ([system]
    (if (:running @system)
      (let [operations (for [fn (:stop @system)] (fn))]
-       (println :stopping)
        (doall operations)
        (swap! system assoc :stop [])
        (swap! system stopped))
      system)))
 
-(def ^:private initialized (atom false))
-
 (defn init
   []
   (when-not @initialized
-    (println :initializing :system)
-    (start)
+    ;; This still needs work
     ; (ns/load-namespaces (traveling-namespaces))
-    ; (let [fuckcunt (start)]
-    ;   (println :fuckcunt fuckcunt)
-    ;   (stop fuckcunt)
-    ;   (swap! system* assoc :started true)
-    ;   (swap! system* assoc :jesus :fuck!))
+    (start)
     (reset! initialized true)))
 
 (defn reset
