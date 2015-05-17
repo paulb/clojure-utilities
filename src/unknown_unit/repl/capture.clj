@@ -35,14 +35,13 @@
 (defmacro local
   "Imports the specified expression into the local namespace."
   [name]
-  (if-let [expression (system/existing-expression name)]
-    expression
-    (println name "not found")))
+  (or (system/existing-expression name)
+      (println name "not found")))
 
 (defmacro local-multi
   "Imports the specified expressions into the local namespace."
   [& names]
-  (println :.....)
-  (println :.....)
-  (println :.....)
-  `~(keep system/existing-expression names))
+  (let [name (first names)]
+    (if-let [expression (system/existing-expression name)]
+      `[~expression]
+      (println name "not found"))))
