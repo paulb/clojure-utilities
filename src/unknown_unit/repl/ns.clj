@@ -1,7 +1,11 @@
 (ns unknown-unit.repl.ns
   (:require [clojure.string :as str]
             [ns-tracker.core :refer :all]
-            [unknown-unit.config :as config])
+            [unknown-unit.config :as config]
+            ;; Need to figure out how not to have to include this.
+            ;; It should be dynamically required per ns-imports.
+            [unknown-unit.repl.capture]
+            [unknown-unit.repl.macro])
   (:use [clojure.java.io])
   (:refer-clojure :exclude [namespace ns-imports ns-name]))
 
@@ -20,7 +24,7 @@
 ;; instead of locally referred.
 (def ^:private ns-alias (config/get :ns-alias))
 (def ^:private ns-prefix (str/replace (str *ns*) #"\.[^\.]*$" ""))
-(def ^:private ns-imports '[ns macro])
+(def ^:private ns-imports '[ns capture macro])
 (def ^:private ns-directives #{:as :refer})
 
 (def referrals '[ns- ns+ reload-ns])
@@ -91,6 +95,10 @@
   ;;      it's a traveling namespace.
   (load-namespaces (modified-namespaces))
   (config/reload)
+  (load-namespaces (traveling-namespaces)))
+
+(defn init
+  []
   (load-namespaces (traveling-namespaces)))
 
 (defmacro follow-ns

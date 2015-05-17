@@ -7,6 +7,6 @@
                  [org.clojure/core.memoize "0.5.6"]
                  [ns-tracker "0.2.2"]]
   :min-lein-version "2.0.0"
-  :repl-options  {:init-ns unknown-unit.repl.system
-                  :init [(unknown-unit.repl.system/init)]}
+  :repl-options  {:init-ns unknown-unit.repl.core
+                  :init [(unknown-unit.repl.core/init)]}
   :resource-paths ["config"])

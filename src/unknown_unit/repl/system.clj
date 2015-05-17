@@ -1,18 +1,44 @@
 (ns unknown-unit.repl.system
-  (:require [unknown-unit.config :as config]
-            [unknown-unit.repl.ns :as ns])
-  (:refer-clojure :exclude [ns]))
+  (:require [unknown-unit.config :as config]))
 
 (def ^:private auto-refresh? (boolean (config/get :auto-refresh)))
 (def ^:private initialized (atom false))
 
 (def ^:private system*
-  (atom {:running false
-         :stop []}))
+  (atom {:ns-refresh nil
+         :running false
+         :stop []
+         :vault {}}))
 
 (defn system
   []
   @system*)
+
+(def ^:private configurable #{:ns-refresh})
+
+(defn configure
+  [& kv-pairs]
+  (if-let [valid-config (->> (partition 2 kv-pairs)
+                             (filter (comp configurable first))
+                             seq)]
+    (->> (reduce (fn [m [k v]] (assoc m k v)) {} valid-config)
+         (swap! system* merge))))
+
+;; TODO Add to output of clojure.repl/source & clojure.repl/doc
+;;      how?
+;; TODO Add a name so we can selectively remove.
+(defn capture
+  [key op]
+  (println :capture key op)
+  (swap! system* update-in [:vault] assoc key op))
+
+(defn clear-vault
+  []
+  (swap! system* assoc :vault []))
+
+(defn existing-definition
+  [key]
+  (get-in @system* [:vault key]))
 
 (defn running
   [system]
@@ -35,7 +61,7 @@
               (Thread/sleep refresh-interval)
               (let [state {:initialized @initialized
                            :system @system*}]
-                (ns/reload-ns)
+                ((:ns-refresh @system*))
                 (reset! initialized (:initialized state))
                 (reset! system* (:system state)))))))
 
@@ -74,8 +100,6 @@
   (stop)ped should be re(start)ed."
   []
   (when-not @initialized
-    ;; This still needs work
-    ; (ns/load-namespaces (traveling-namespaces))
     (start)
     (reset! initialized true)))
 
