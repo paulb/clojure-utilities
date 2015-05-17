@@ -1,6 +1,15 @@
 (ns unknown-unit.repl.system
   (:require [unknown-unit.config :as config]))
 
+;; FIXME Calling reload-ns directly resets the system
+;;       Fix by
+;;       - overload reload-ns here and have this one
+;;         be what the user sees.
+;;       - Warn the user
+;;       - ???
+
+(def referrals '[start reset stop system])
+
 (def ^:private auto-refresh? (boolean (config/get :auto-refresh)))
 (def ^:private initialized (atom false))
 
@@ -29,14 +38,14 @@
 ;; TODO Add a name so we can selectively remove.
 (defn capture
   [key op]
-  (println :capture key op)
   (swap! system* update-in [:vault] assoc key op))
 
+;; Not used. Needed? Wanted?
 (defn clear-vault
-  []
-  (swap! system* assoc :vault []))
+  [system]
+  (swap! system assoc :vault {}))
 
-(defn existing-definition
+(defn existing-expression
   [key]
   (get-in @system* [:vault key]))
 
@@ -107,6 +116,7 @@
   ([] (reset system*))
   ([system]
    (stop system)
+   (clear-vault system)
    (start system)))
 
 (defn -start
