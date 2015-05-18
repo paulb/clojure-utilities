@@ -49,11 +49,11 @@
   [key]
   (get-in @system* [:vault key]))
 
-(defn running
+(defn- running
   [system]
   (assoc system :running true))
 
-(defn stopped
+(defn- stopped
   [system]
   (assoc system
     :running false
