@@ -11,7 +11,6 @@
 (def referrals '[start reset stop system])
 
 (def ^:private auto-refresh? (boolean (config/get :auto-refresh)))
-(def ^:private initialized (atom false))
 
 (def ^:private system*
   (atom {:ns-refresh nil
@@ -40,10 +39,9 @@
   [key op]
   (swap! system* update-in [:vault] assoc key op))
 
-;; Not used. Needed? Wanted?
-(defn clear-vault
-  [system]
-  (swap! system assoc :vault {}))
+(defn- clear-vault
+  []
+  (swap! system* assoc :vault {}))
 
 (defn existing-expression
   [key]
@@ -64,60 +62,43 @@
   "Returns a future running a task to check for and reload
   changed namespaces. System state is backed up, and restored
   after reloading."
-  [system]
+  []
   (let [refresh-interval (config/get [:refresh :interval] 500)]
     (future (while (not (Thread/interrupted))
               (Thread/sleep refresh-interval)
-              (let [state {:initialized @initialized
-                           :system @system}]
-                ((:ns-refresh @system))
-                (reset! initialized (:initialized state))
-                (reset! system (:system state)))))))
+              (let [state {:system @system*}]
+                ((:ns-refresh @system*))
+                (reset! system* (:system state)))))))
 
 ;; TODO Ability to inject external dependencies into the system.
 (defn start
-  "An existing system can be externally supplied, or the
-  current system will be used. When first starting a session,
-  this will use the default empty system.
-  If the configuration declares the system should auto-refresh namespaces,
-  a thread is spun off to manage this task and the system is given a
-  cancellation function."
-  ([] (start system*))
-  ([system]
-   (if-not (:running @system)
-     (if-let [auto? (config/get [:refresh :auto])]
-       (let [cancel-loader (partial future-cancel (reloader system))]
-         (swap! system update-in [:stop] conj cancel-loader)
-         (swap! system running))
-       (swap! system running))
-    system)))
+  "Activates the system. If the configuration declares the system
+  should auto-refresh namespaces, a thread is spun off to manage
+  this and a cancellation function is supplied."
+  []
+  (if-not (:running @system*)
+    (if-let [auto? (config/get [:refresh :auto])]
+      (let [cancel-loader (partial future-cancel (reloader))]
+        (swap! system* update-in [:stop] conj cancel-loader)
+        (swap! system* running))
+      (swap! system* running))
+    system))
 
 (defn stop
-  "An existing system can be externally supplied, or the
-  current system will be used. Stopping a system will end
+  "Stops the currently active system. Stopping a system will end
   the namespace reloading task if one was running."
-  ([] (stop system*))
-  ([system]
-   (if (:running @system)
-     (let [operations (for [fn (:stop @system)] (fn))]
-       (doall operations)
-       (swap! system stopped))
-     system)))
-
-(defn init
-  "Will only work once. A previous session which has been
-  (stop)ped should be re(start)ed."
   []
-  (when-not @initialized
-    (start)
-    (reset! initialized true)))
+  (if (:running @system*)
+    (let [operations (for [fn (:stop @system*)] (fn))]
+      (doall operations)
+      (swap! system* stopped))
+    system*))
 
 (defn reset
-  ([] (reset system*))
-  ([system]
-   (stop system)
-   (clear-vault system)
-   (start system)))
+  []
+  (stop)
+  (clear-vault)
+  (start))
 
 (defn -start
   [this]
