@@ -8,7 +8,7 @@
 ;;       - Warn the user
 ;;       - ???
 
-(def referrals '[start reset stop system])
+(def referrals '[configure start reset stop system])
 
 (def ^:private auto-refresh? (boolean (config/get :auto-refresh)))
 
