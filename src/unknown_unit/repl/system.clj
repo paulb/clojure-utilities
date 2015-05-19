@@ -99,23 +99,3 @@
   (stop)
   (clear-vault)
   (start))
-
-(defn -start
-  [this]
-  (start))
-
-(defn -stop
-  [this]
-  (stop))
-
-(defn -destroy
-  [this]
-  ;; no-op
-  )
-
-(defn -main
-  [& args]
-  (.addShutdownHook (Runtime/getRuntime) (do (stop) (Thread. stop)))
-  (start))
-
-(def atom-test (atom {}))
