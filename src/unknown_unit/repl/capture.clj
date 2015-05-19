@@ -32,13 +32,13 @@
   [op name & body]
   (store op name body))
 
-(defmacro local
-  "Imports the specified expression into the local namespace."
-  [name]
-  (or (system/existing-expression name)
-      (println name "not found")))
-
 (defmacro local-multi
   "Imports the specified expressions into the local namespace."
   [& names]
+  (println :names names)
   `[~@(keep system/existing-expression names)])
+
+(defmacro local
+  "Imports the specified expression into the local namespace."
+  [name]
+  `(local-multi ~name))
