@@ -168,6 +168,11 @@ Currently only :ns-refresh can be configured. This is best left to the core load
 
 `(system)` returns the state of the current system. This can be examined to see if the system is running, what stop operations have been declared, and what expressions have been captured.
 
+**NOTE** Calling `(reload-ns)` when the system is set to auto-refresh will clear the current
+system. Auto-refresh behavior is undefined at this point, it may or may not still be running.
+
+It is suggested that you do not call `(reload-ns)` directly if auto-refresh is active.
+
 ## Todo
 
 - replace ns-tracker with tools.namespace
