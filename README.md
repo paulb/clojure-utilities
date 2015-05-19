@@ -26,8 +26,8 @@ the following entries:
 
 ```
 :dependencies [[unknown-unit/clojure-utils "0.1.0-SNAPSHOT"]]
-:injections [(require 'unknown-unit.repl.ns)
-             (unknown-unit.repl.ns/init)]
+:injections [(require 'unknown-unit.repl.core)
+             (unknown-unit.repl.core/init)]
 ```
 
 If there may be code in `:injections` which might throw an error,
@@ -76,8 +76,7 @@ it is assumed all functions should be referred locally & this is rewritten as
 
 `[my.project.core :refer :all]`
 
-The utility functions (unknown-unit.repl.ns) will generally be referred as
-local functions unless specified otherwise in the config.
+The utility functions (unknown-unit.repl.ns, unknown-unit.repl.capture, etc.) will generally be referred as local functions unless specified otherwise in the config.
 
 ## Usage
 
@@ -129,6 +128,45 @@ Available options:
 
 Leaving out the level option automatically selects level :1. Often this produces the same as level :0, but sometimes level :0 may expand more.
 See the documentation for these functions for more details.
+
+### Function capture
+
+`(capture <expression>)` captures the given `def` or `defn` expression and returns it to be evaluated in the current namespace.
+
+E.g., `capture defn airspeed-velocity [swallow] (:airspeed-velocity swallow))` will generate the function `airspeed-velicty` in the current namespace, and store the source code.
+
+Errors:
+- :op-not-supported
+- :expression-already-exists
+
+`(modify <expression>)` replaces an existing expression with a new version.
+
+Errors:
+- :op-not-supported
+- :expression-not-found
+
+`(local <name>)` imports the specified named expression into the current namespace.
+
+`(local-multi [<name> & <names>])` imports the specified named expressions into the current namespace.
+
+`local` and `local-multi` return no errors. Output is a list of found expressions. An empty list indicates none of the named expressions was found.
+
+### System
+
+The system is the heart of the session.
+If auto-refresh is specified in the configuration, the system controls the reloading thread.
+
+`(configure <key val> & <key val>)` configures allowed values inside the system.
+
+Currently only :ns-refresh can be configured. This is best left to the core loading code.
+
+`(start)` starts the system, including generating an auto-refresh thread when requested.
+
+`(stop)` stops the system. Stopping the system runs all declared operations in the system's `:stop` vector. The `:stop` vector is then cleared. No other changes are made to the system.
+
+`(reset)` stops the system via `(stop)`, clears any captured expressions, and re`(start)`s the system.
+
+`(system)` returns the state of the current system. This can be examined to see if the system is running, what stop operations have been declared, and what expressions have been captured.
 
 ## Todo
 

@@ -19,18 +19,18 @@
   Expressions will not be overwritten unless forced (not yet implemented.)
   The expression is then returned for evaluation in the current namespace."
   [op name & body]
-  (if (contains? valid-operations op)
-    (if-let [existing-expression (system/existing-expression name)]
-      (do
-        (println name "is already defined. Use `modify` to overwrite.")
-        existing-expression)
-      (store op name body))
-    (println op "not supported")))
+  (cond
+    (not (contains? valid-operations op)) :op-not-supported
+    (system/existing-expression name) :expression-already-exists
+    :else (store op name body)))
 
 (defmacro modify
   "Modify a captured expression."
   [op name & body]
-  (store op name body))
+  (cond
+    (not (contains? valid-operations op)) :op-not-supported
+    (not (system/existing-expression name)) :expression-not-found
+    :else (store op name body)))
 
 (defmacro local-multi
   "Imports the specified expressions into the local namespace."
