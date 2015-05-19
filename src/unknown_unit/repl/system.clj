@@ -64,15 +64,15 @@
   "Returns a future running a task to check for and reload
   changed namespaces. System state is backed up, and restored
   after reloading."
-  []
+  [system]
   (let [refresh-interval (config/get [:refresh :interval] 500)]
     (future (while (not (Thread/interrupted))
               (Thread/sleep refresh-interval)
               (let [state {:initialized @initialized
-                           :system @system*}]
-                ((:ns-refresh @system*))
+                           :system @system}]
+                ((:ns-refresh @system))
                 (reset! initialized (:initialized state))
-                (reset! system* (:system state)))))))
+                (reset! system (:system state)))))))
 
 ;; TODO Ability to inject external dependencies into the system.
 (defn start
@@ -86,7 +86,7 @@
   ([system]
    (if-not (:running @system)
      (if-let [auto? (config/get [:refresh :auto])]
-       (let [cancel-loader (partial future-cancel (reloader))]
+       (let [cancel-loader (partial future-cancel (reloader system))]
          (swap! system update-in [:stop] conj cancel-loader)
          (swap! system running))
        (swap! system running))
