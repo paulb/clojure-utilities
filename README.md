@@ -91,9 +91,9 @@ If auto-refresh is specified in the configuration, the system controls the reloa
 
 Currently only :ns-refresh can be configured. This is best left to the core loading code.
 
-`(start)` starts the system, including generating an auto-refresh thread when requested.
+`(start)` starts the system, including generating an auto-refresh thread when configured.
 
-`(stop)` stops the system. Stopping the system runs all declared operations in the system's `:stop` vector. The `:stop` vector is then cleared. No other changes are made to the system.
+`(stop)` stops the system. Stopping the system runs all declared operations in the system's `:stop` vector, including stopping auto-refresh if it was running. The `:stop` vector is then cleared. No other changes are made to the system.
 
 `(reset)` stops the system via `(stop)`, clears any captured expressions, and re`(start)`s the system.
 
