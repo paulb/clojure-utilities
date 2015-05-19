@@ -7,7 +7,6 @@
 
 (defn init
   []
-  (println :attempt-repl-init)
   (when-not @initialized
     (println :initializing-repl-system)
     (ns/init)
