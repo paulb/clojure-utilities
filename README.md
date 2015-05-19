@@ -82,6 +82,28 @@ The utility functions (unknown-unit.repl.ns, unknown-unit.repl.capture, etc.) wi
 
 Start a repl inside any of your projects.
 
+### System
+
+The system is the heart of the repl session.
+If auto-refresh is specified in the configuration, the system controls the reloading thread.
+
+`(configure <key val> & <key val>)` configures allowed values inside the system.
+
+Currently only :ns-refresh can be configured. This is best left to the core loading code.
+
+`(start)` starts the system, including generating an auto-refresh thread when requested.
+
+`(stop)` stops the system. Stopping the system runs all declared operations in the system's `:stop` vector. The `:stop` vector is then cleared. No other changes are made to the system.
+
+`(reset)` stops the system via `(stop)`, clears any captured expressions, and re`(start)`s the system.
+
+`(system)` returns the state of the current system. This can be examined to see if the system is running, what stop operations have been declared, and what expressions have been captured.
+
+**NOTE** Calling `(reload-ns)` when the system is set to auto-refresh will clear the current
+system. Auto-refresh behavior is undefined at this point, it may or may not still be running.
+
+It is recommended that you do not call `(reload-ns)` directly if auto-refresh is active.
+
 ### Namespace functions
 
 `(reload-ns)` will reload all namespaces from your project src and test
@@ -93,6 +115,28 @@ functions (:refer :all).
 
 `(ns+ <namespace>)` does the same as `ns-` except that all defined namespaces
 are referred to local functions, whether `:as` or `:refer` were already declared.
+
+### Function capture
+
+`(capture <expression>)` captures the given `def` or `defn` expression and returns it to be evaluated in the current namespace.
+
+E.g., `capture defn airspeed-velocity [swallow] (:airspeed-velocity swallow))` will generate the function `airspeed-velicty` in the current namespace, and store the source code.
+
+Errors:
+- :op-not-supported
+- :expression-already-exists
+
+`(modify <expression>)` replaces an existing expression with a new version.
+
+Errors:
+- :op-not-supported
+- :expression-not-found
+
+`(local <name>)` imports the specified named expression into the current namespace.
+
+`(local-multi [<name> & <names>])` imports the specified named expressions into the current namespace.
+
+`local` and `local-multi` return no errors. Output is a list of found expressions. An empty list indicates none of the named expressions was found.
 
 ### Macro functions
 
@@ -129,50 +173,6 @@ Available options:
 Leaving out the level option automatically selects level :1. Often this produces the same as level :0, but sometimes level :0 may expand more.
 See the documentation for these functions for more details.
 
-### Function capture
-
-`(capture <expression>)` captures the given `def` or `defn` expression and returns it to be evaluated in the current namespace.
-
-E.g., `capture defn airspeed-velocity [swallow] (:airspeed-velocity swallow))` will generate the function `airspeed-velicty` in the current namespace, and store the source code.
-
-Errors:
-- :op-not-supported
-- :expression-already-exists
-
-`(modify <expression>)` replaces an existing expression with a new version.
-
-Errors:
-- :op-not-supported
-- :expression-not-found
-
-`(local <name>)` imports the specified named expression into the current namespace.
-
-`(local-multi [<name> & <names>])` imports the specified named expressions into the current namespace.
-
-`local` and `local-multi` return no errors. Output is a list of found expressions. An empty list indicates none of the named expressions was found.
-
-### System
-
-The system is the heart of the session.
-If auto-refresh is specified in the configuration, the system controls the reloading thread.
-
-`(configure <key val> & <key val>)` configures allowed values inside the system.
-
-Currently only :ns-refresh can be configured. This is best left to the core loading code.
-
-`(start)` starts the system, including generating an auto-refresh thread when requested.
-
-`(stop)` stops the system. Stopping the system runs all declared operations in the system's `:stop` vector. The `:stop` vector is then cleared. No other changes are made to the system.
-
-`(reset)` stops the system via `(stop)`, clears any captured expressions, and re`(start)`s the system.
-
-`(system)` returns the state of the current system. This can be examined to see if the system is running, what stop operations have been declared, and what expressions have been captured.
-
-**NOTE** Calling `(reload-ns)` when the system is set to auto-refresh will clear the current
-system. Auto-refresh behavior is undefined at this point, it may or may not still be running.
-
-It is recommended that you do not call `(reload-ns)` directly if auto-refresh is active.
-
 ## Todo
 
 - replace ns-tracker with tools.namespace
@@ -183,7 +183,6 @@ It is recommended that you do not call `(reload-ns)` directly if auto-refresh is
 - ensure configuration file changes get reloaded
 - ensure macros, multi-methods, etc., get reloaded (this probably requires tools.namespace)
 - function to import new defaults from repl.edn.example or have defaults in separate config
-- repl.edn.example
 - can reload only (on request)
   - current namespace
   - specified namespaces
