@@ -1,6 +1,6 @@
-{:auto-refresh true
- :namespaces {:default [[clojure.repl]]
+{\:namespaces {:default [[clojure.repl]]
               :user []}
- :ns-alias nil
- :refresh-interval 500 ;; ms
+ :util-ns nil
+ :refresh {:auto true
+           :interval 500} ; ms
  :watch []}}

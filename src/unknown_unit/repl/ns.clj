@@ -2,52 +2,66 @@
   (:require [clojure.string :as str]
             [ns-tracker.core :refer :all]
             [unknown-unit.config :as config])
-  (:use [clojure.java.io])
-  (:refer-clojure :exclude [namespace ns-imports ns-name]))
+  (:use [clojure.java.io]))
 
+;; This describes future functionality. Built in namespaces
+;; will be aliased according to internal rules.
 ;; Namespaces are defined in require format:
 ;; [unladen.swallow]
 ;; [unladen.swallow :as swallow]
 ;; [laden.swallow :refer [coconuts]]
 ;; [laden.swallow :as swallow :refer [coconuts]]
-;; [vorpal.rabbit :refer :all]
-
-;; The last one is not strictly necessary:
-;; [vorpal.rabbit] implies :refer :all
-
-(def ^:private local-ns (symbol (str *ns*)))
-;; Define this if you want your core functions aliased
-;; instead of locally referred.
-(def ^:private ns-alias (config/get :ns-alias))
-(def ^:private ns-prefix (str/replace (str *ns*) #"\.[^\.]*$" ""))
-(def ^:private ns-imports '[ns capture macro system])
-(def ^:private ns-directives #{:as :refer})
+;; [vorpal.rabbit :refer :all] ; this may be dangerous; beware naming conflicts.
+;; [vorpal.rabbit] implies the default u-/
 
 (def referrals '[ns- ns+ reload-ns])
 
-(defn- aliased
-  [namespace suffix]
-  (let [aliased (symbol (str ns-alias "." suffix))]
-    (conj namespace :as aliased)))
+(def ^:private default-ns "u-")
+(def ^:private imports '[ns capture macro system])
+(def ^:private local-ns (symbol (str *ns*)))
+;; Define this if you want your core functions aliased to a particular namespace.
+;; If nil, most functions will be namespaced to the default u-/
+;; Exceptions are the namespace control functions, ns-, ns+, reload-ns.
+;; Since we can't control loading order this is likely the safest approach.
+(def ^:private util-ns (or (config/get :util-ns) default-ns))
+(def ^:private ns-prefix (str/replace (str *ns*) #"\.[^\.]*$" ""))
+(def ^:private ns-directives #{:as :refer})
 
-(defmacro req
+(defn- aliased
   [namespace]
-  `(require ~namespace))
+  (let [aliased (symbol (str util-ns "." suffix))]
+    (conj namespace :as aliased)))
 
 (defn- referred
   [namespace]
   (let [ns-name (first namespace)]
-    (when-not (= ns-name local-ns) (req ns-name))
+    (when-not (= ns-name local-ns) (require ns-name))
     (->> (var-get (intern ns-name 'referrals))
          (conj namespace :refer))))
 
+(defmacro intern-user-functions
+  [qualified-name]
+  ;; This may not be necessary. Or should be changed to only do non 'repl.ns
+  (when-not (= qualified-name local-ns)
+    (require qualified-name))
+  (let [referrals (->> (var-get (intern qualified-name 'referrals))
+                       (map #(vector (symbol (str qualified-name "/" %) %))))]
+    `~(
+       ; doseq [[name var] referrals]
+       ;  (println :name (class name))
+       ;  (println :var (class var))
+        #_(intern 'u- name var))))
+
+       (intern ~'u- fn# #'~qualified-name/fn#))))
+
 (defn- core-namespaces*
   []
-  (let [namespaces (->> (map #(str ns-prefix "." %) ns-imports)
-                        (map (comp vector symbol)))]
-    (if ns-alias
-      (mapv aliased namespaces ns-imports)
-      (mapv referred namespaces))))
+  (map (fn [name]
+         (let [qualified-name (symbol (str ns-prefix "." name))]
+           (if (= name 'ns)
+             (referred [qualified-name])
+             (intern-user-functions qualified-name))))
+       imports))
 
 (def ^:private core-namespaces (memoize core-namespaces*))
 
@@ -93,13 +107,25 @@
   []
   ;; TODO Don't need to load a modified namespace if
   ;;      it's a traveling namespace.
+  ; (println :loading-mod (modified-namespaces))
+  ; (println :loading-traveling (traveling-namespaces))
   (load-namespaces (modified-namespaces))
   (config/reload)
   (load-namespaces (traveling-namespaces)))
 
+; (defmacro override-ns
+;   []
+;   (if (config/get :override-ns)
+;   ;   ; (do
+;       (and (not (println :override-ns))
+;            `(defmacro ~'fweep [~'name] (println :fweep!) `(ns- ~'dave)))))
+
 (defn init
   []
+  (println :innit?)
+  (create-ns util-ns)
   (load-namespaces (traveling-namespaces)))
+  ; (override-ns))
 
 (defmacro follow-ns
   "Changes to a new namespace and requires specified namespaces.
@@ -122,3 +148,15 @@
   All functions are referred locally."
   [namespace]
   `(follow-ns ~namespace :refer-all? true))
+;     (defmacro ns
+;       [name]
+;       `(ns- ~'dave)))
+; )
+  ;   [namespace]
+  ;   `(ns- ~namespace))
+  ; (require '[clojure.core :only [ns]]))
+
+; (defmacro ns
+;   [name]
+;   `(ns- ~name))
+

@@ -204,6 +204,13 @@ See the documentation for these functions for more details.
   - commands get wrapped in a do block,
   - or if dependent, in an as->/let
 
+- namespace shortcuts; e.g.: unknown-unit.repl.ns replaced by urn. User defined or automatically detected.
+- config to alias functions to personal shortcuts - is this even possible?
+
+- function to see all loaded namespaces in a specific group
+  - pair with function to find all values (or at least functions) defined in a specific namespace
+  - start with, e.g., (->> (map ns-name (all-ns)) (filter #(re-find #"unknown" (str %))))
+
 ## Issues
 
 - If you have an :init in the same profile or the root of your project.clj
