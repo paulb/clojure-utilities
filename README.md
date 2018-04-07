@@ -154,6 +154,14 @@ See the documentation for these functions for more details.
   - so that people can redefine functions they know they don't need direct access to
   - only used if functions are referred locally
 
+- declare the main namespace used, so that you can ->
+  - switch namespaces quickly
+  - use the shorthand in require statements
+
+- record sequences of commands other than a function
+  - commands get wrapped in a do block,
+  - or if dependent, in an as->/let
+
 ## Issues
 
 - If you have an :init in the same profile or the root of your project.clj
