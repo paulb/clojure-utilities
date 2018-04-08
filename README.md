@@ -170,6 +170,17 @@ See the documentation for these functions for more details.
 - For this reason it is recommended you use the `:injections` parameter
   instead of `:repl-options {:init ...}` for loading the utility functions.
 
+## Branches
+
+- At any given time there may be a lot of branches.
+- Feature branches may have been merged to develop and paused rather than deleted (this is probably bad.)
+- Branches have been merged using fast forward so no merge commits (this may be bad.)
+- Experimental branches are things I am trying which have a high level of uncertainty whether they are
+  - possible
+  - worth doing
+- `edge` is for things unknown which have not yet made it to an experimental or feature branch.
+  - there be dragons...
+
 ## License
 
 The MIT License (MIT)
