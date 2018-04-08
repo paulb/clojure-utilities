@@ -19,11 +19,6 @@
   [sym rep]
   (let [replace-with (get rep sym sym)]
     replace-with))
-    ; (println :are-you-FUCKING-HIGH?)
-    ; (println :are-you-FUCKING-HIGH?)
-    ; (println replace-with :from sym)
-    ; (println :are-you-FUCKING-HIGH?)
-    ; (println :are-you-FUCKING-HIGH?)
     ;; FIXME There is no way this is correct. Not a chance.
     ; (->>
       ; (if (list? replace-with) `(quote ~replace-with) replace-with)))
